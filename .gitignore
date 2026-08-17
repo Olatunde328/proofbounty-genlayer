@@ -23,3 +23,14 @@ __pycache__/
 *.compiled.js
 package-lock.json
 
+
+# Local Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Test/cache artifacts
+.pytest_cache/
+artifacts/
