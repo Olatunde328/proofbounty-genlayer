@@ -17,6 +17,17 @@ class Bounty:
     status: str
     verdict: str
     reasoning: str
+    reward: u256
+    paid: bool
+
+
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+
+    class Write:
+        pass
 
 
 class ProofBounty(gl.Contract):
@@ -85,7 +96,7 @@ Do not include text outside the JSON object.
 
         return result_json
 
-    @gl.public.write
+    @gl.public.write.payable
     def create_bounty(
         self,
         title: str,
@@ -99,6 +110,10 @@ Do not include text outside the JSON object.
             raise gl.vm.UserError("Requirements are required")
 
         sender = gl.message.sender_address
+        reward = gl.message.value
+
+        if reward == u256(0):
+            raise gl.vm.UserError("Bounty reward is required")
 
         bounty_id = f"bounty-{int(self.bounty_count) + 1}"
 
@@ -112,6 +127,8 @@ Do not include text outside the JSON object.
             status="OPEN",
             verdict="",
             reasoning="",
+            reward=reward,
+            paid=False,
         )
 
         self.bounties[bounty_id] = bounty
@@ -192,6 +209,15 @@ Do not include text outside the JSON object.
 
         if verdict == "PASS":
             bounty.status = "APPROVED"
+
+            if bounty.paid:
+                raise gl.vm.UserError("Bounty already paid")
+
+            _Recipient(bounty.contributor).emit_transfer(
+                value=bounty.reward
+            )
+
+            bounty.paid = True
         else:
             bounty.status = "REJECTED"
 

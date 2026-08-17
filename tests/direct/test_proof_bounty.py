@@ -5,6 +5,9 @@ import json
 from tests.direct.conftest import to_hex
 
 
+TEST_REWARD = 10**18  # 1 GEN in wei
+
+
 def _setup_evaluation_mocks(
     vm,
     verdict="PASS",
@@ -48,6 +51,7 @@ def test_create_bounty(
     direct_vm.sender = direct_alice
     alice = to_hex(direct_alice)
 
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build a GenLayer landing page",
         "Must be responsive and include a public GitHub repository",
@@ -73,6 +77,7 @@ def test_creator_cannot_accept_own_bounty(
 
     direct_vm.sender = direct_alice
 
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build landing page",
         "Must be responsive",
@@ -94,6 +99,7 @@ def test_contributor_can_accept_bounty(
 
     direct_vm.sender = direct_alice
 
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build landing page",
         "Must be responsive",
@@ -120,6 +126,7 @@ def test_submit_evidence(
 
     direct_vm.sender = direct_alice
 
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build landing page",
         "Must be responsive",
@@ -149,6 +156,7 @@ def test_only_contributor_can_submit_evidence(
     contract = direct_deploy("contracts/proof_bounty.py")
 
     direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build landing page",
         "Must be responsive",
@@ -177,6 +185,7 @@ def test_invalid_evidence_url_rejected(
     contract = direct_deploy("contracts/proof_bounty.py")
 
     direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build landing page",
         "Must be responsive",
@@ -203,6 +212,7 @@ def test_evaluation_passes_valid_submission(
     contract = direct_deploy("contracts/proof_bounty.py")
 
     direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build a GenLayer landing page",
         "Must be responsive and include a public GitHub repository",
@@ -243,6 +253,7 @@ def test_evaluation_rejects_invalid_submission(
     contract = direct_deploy("contracts/proof_bounty.py")
 
     direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build a GenLayer landing page",
         "Must include wallet connect and documentation",
@@ -283,6 +294,7 @@ def test_cannot_evaluate_twice(
     contract = direct_deploy("contracts/proof_bounty.py")
 
     direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
     contract.create_bounty(
         "Build landing page",
         "Must be responsive",
@@ -304,3 +316,85 @@ def test_cannot_evaluate_twice(
         "Bounty has no submission to evaluate"
     ):
         contract.evaluate_submission("bounty-1")
+
+
+def test_zero_reward_bounty_rejected(
+    direct_vm,
+    direct_deploy,
+    direct_alice,
+):
+    contract = direct_deploy("contracts/proof_bounty.py")
+
+    direct_vm.sender = direct_alice
+    direct_vm.value = 0
+
+    with direct_vm.expect_revert(
+        "Bounty reward is required"
+    ):
+        contract.create_bounty(
+            "Unfunded bounty",
+            "Must not be created without escrow",
+        )
+
+
+def test_bounty_stores_reward(
+    direct_vm,
+    direct_deploy,
+    direct_alice,
+):
+    contract = direct_deploy("contracts/proof_bounty.py")
+
+    direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
+
+    contract.create_bounty(
+        "Build an escrowed landing page",
+        "Must provide a live deployment",
+    )
+
+    bounty = contract.get_bounty("bounty-1")
+
+    assert int(bounty.reward) == TEST_REWARD
+    assert bounty.paid is False
+
+
+def test_failed_submission_keeps_escrow_unpaid(
+    direct_vm,
+    direct_deploy,
+    direct_alice,
+    direct_bob,
+):
+    contract = direct_deploy("contracts/proof_bounty.py")
+
+    direct_vm.sender = direct_alice
+    direct_vm.value = TEST_REWARD
+
+    contract.create_bounty(
+        "Build a wallet-enabled app",
+        "Must demonstrate working wallet connection",
+    )
+
+    direct_vm.sender = direct_bob
+    direct_vm.value = 0
+
+    contract.accept_bounty("bounty-1")
+
+    contract.submit_evidence(
+        "bounty-1",
+        "https://example.com/project",
+    )
+
+    _setup_evaluation_mocks(
+        direct_vm,
+        verdict="FAIL",
+        reasoning="Wallet functionality was not demonstrated.",
+    )
+
+    contract.evaluate_submission("bounty-1")
+
+    bounty = contract.get_bounty("bounty-1")
+
+    assert bounty.status == "REJECTED"
+    assert bounty.verdict == "FAIL"
+    assert bounty.paid is False
+    assert int(bounty.reward) == TEST_REWARD
