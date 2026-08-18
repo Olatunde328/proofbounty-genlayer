@@ -59,12 +59,12 @@ def test_create_bounty(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert bounty.id == "bounty-1"
-    assert bounty.creator.as_hex == alice
-    assert bounty.title == "Build a GenLayer landing page"
-    assert bounty.status == "OPEN"
-    assert bounty.evidence_url == ""
-    assert bounty.verdict == ""
+    assert bounty["id"] == "bounty-1"
+    assert bounty["creator"] == alice
+    assert bounty["title"] == "Build a GenLayer landing page"
+    assert bounty["status"] == "OPEN"
+    assert bounty["evidence_url"] == ""
+    assert bounty["verdict"] == ""
     assert contract.get_bounty_count() == 1
 
 
@@ -112,8 +112,8 @@ def test_contributor_can_accept_bounty(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert bounty.status == "IN_PROGRESS"
-    assert bounty.contributor.as_hex == bob
+    assert bounty["status"] == "IN_PROGRESS"
+    assert bounty["contributor"] == bob
 
 
 def test_submit_evidence(
@@ -142,8 +142,8 @@ def test_submit_evidence(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert bounty.status == "SUBMITTED"
-    assert bounty.evidence_url == "https://example.com/project"
+    assert bounty["status"] == "SUBMITTED"
+    assert bounty["evidence_url"] == "https://example.com/project"
 
 
 def test_only_contributor_can_submit_evidence(
@@ -236,10 +236,10 @@ def test_evaluation_passes_valid_submission(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert bounty.status == "APPROVED"
-    assert bounty.verdict == "PASS"
+    assert bounty["status"] == "APPROVED"
+    assert bounty["verdict"] == "PASS"
     assert (
-        bounty.reasoning
+        bounty["reasoning"]
         == "The evidence satisfies the required criteria."
     )
 
@@ -277,10 +277,10 @@ def test_evaluation_rejects_invalid_submission(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert bounty.status == "REJECTED"
-    assert bounty.verdict == "FAIL"
+    assert bounty["status"] == "REJECTED"
+    assert bounty["verdict"] == "FAIL"
     assert (
-        bounty.reasoning
+        bounty["reasoning"]
         == "The evidence does not prove wallet connectivity."
     )
 
@@ -354,8 +354,8 @@ def test_bounty_stores_reward(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert int(bounty.reward) == TEST_REWARD
-    assert bounty.paid is False
+    assert int(bounty["reward"]) == TEST_REWARD
+    assert bounty["paid"] is False
 
 
 def test_failed_submission_keeps_escrow_unpaid(
@@ -394,7 +394,7 @@ def test_failed_submission_keeps_escrow_unpaid(
 
     bounty = contract.get_bounty("bounty-1")
 
-    assert bounty.status == "REJECTED"
-    assert bounty.verdict == "FAIL"
-    assert bounty.paid is False
-    assert int(bounty.reward) == TEST_REWARD
+    assert bounty["status"] == "REJECTED"
+    assert bounty["verdict"] == "FAIL"
+    assert bounty["paid"] is False
+    assert int(bounty["reward"]) == TEST_REWARD

@@ -221,18 +221,35 @@ Do not include text outside the JSON object.
         else:
             bounty.status = "REJECTED"
 
+    def _serialize_bounty(self, bounty: Bounty) -> dict:
+        return {
+            "id": bounty.id,
+            "creator": bounty.creator.as_hex,
+            "contributor": bounty.contributor.as_hex,
+            "title": bounty.title,
+            "requirements": bounty.requirements,
+            "evidence_url": bounty.evidence_url,
+            "status": bounty.status,
+            "verdict": bounty.verdict,
+            "reasoning": bounty.reasoning,
+            "reward": int(bounty.reward),
+            "paid": bounty.paid,
+        }
+
     @gl.public.view
-    def get_bounty(self, bounty_id: str) -> Bounty:
+    def get_bounty(self, bounty_id: str) -> dict:
 
         if bounty_id not in self.bounties:
             raise gl.vm.UserError("Bounty not found")
 
-        return self.bounties[bounty_id]
+        return self._serialize_bounty(
+            self.bounties[bounty_id]
+        )
 
     @gl.public.view
     def get_bounties(self) -> dict:
         return {
-            bounty_id: bounty
+            bounty_id: self._serialize_bounty(bounty)
             for bounty_id, bounty in self.bounties.items()
         }
 
